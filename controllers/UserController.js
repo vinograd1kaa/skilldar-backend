@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 
 import UserModel from "../models/User.js";
 import UserSchema from "../models/User.js";
+import PostSchema from "../models/Post.js";
 
 export const register = async (req, res) => {
   try {
@@ -91,7 +92,6 @@ export const getMe = async (req, res) => {
   }
   try {
     res.json({ ...user._doc });
-
   } catch (err) {
     return res.status(500).json({
       message: 'Нет доступа',

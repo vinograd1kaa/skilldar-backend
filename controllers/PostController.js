@@ -1,9 +1,9 @@
 import PostSchema from '../models/Post.js';
-import UserSchema from "../models/User.js";
+import {getSubTasksId} from "../utils/getSubTasksId.js";
 
 export const getAll = async (req, res) => {
   try {
-    const posts = await PostSchema.find({ user: req.params.id }).populate('user').exec(); // передаем связь с юзером чтобы было видно информацию о нем
+    const posts = await PostSchema.find({ user: req.params.id }).populate('user').exec();
 
     res.json(posts);
   } catch (err) {
@@ -38,209 +38,64 @@ export const create = async (req, res) => {
 
 export const remove = async (req, res) => {
   try {
-    console.log(req.body);
-    for (let id of req.body) {
-      console.log(id, req.body);
-      PostSchema.findOneAndDelete(
-        {
-          _id: id,
-        },
-        (err, doc) => {
-          if (err) {
-            console.log(err);
-            return res.status(500).json({
-              message: 'Не удалось удалить статью',
-            });
-          }
+    const id = req.params.id;
 
-          if (!doc) {
-            return res.status(404).json({
-              message: 'Статья не найдена',
-            });
-          }
-        },
-      );
+    const allPosts = await PostSchema.find().populate('user').exec();
+    const subPosts = getSubTasksId(allPosts, id) || [id];
+
+    if (subPosts) {
+      for (let id of subPosts) {
+        await PostSchema.findOneAndDelete(
+          {
+            _id: id,
+          },
+          (err, doc) => {
+            if (err) {
+              return res.status(500).json({
+                message: 'Не удалось удалить статью',
+              });
+            }
+
+            if (!doc) {
+              return res.status(404).json({
+                message: 'Статья не найдена',
+              });
+            }
+          },
+        );
+      }
+      return res.json({
+        success: true
+      })
     }
-    res.json({
-      success: true,
-    });
   } catch (err) {
     console.log(err);
     res.status(500).json({
-      message: 'Не удалось получить статьи',
+      message: 'Не удалось удалить статьи',
     });
   }
 };
 
-export const updateTitle = async (req, res) => {
+export const handlePostUpdate = async (req, res) => {
   try {
-    const postId = req.params.id;
+    const id = req.params.id;
+    const newPost = req.body;
 
-    await PostSchema.updateOne(
-      {
-        _id: postId,
-      },
-      {
-        title: req.body.title,
-      },
-    );
+    const allPosts = await PostSchema.find().populate('user').exec();
+    const subPosts = getSubTasksId(allPosts, id) || [id];
 
-    res.json({
-      success: true
-    })
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: 'Не удалось обновить статью',
-    })
-  }
-}
-
-export const updateIsExpanded = async (req, res) => {
-  try {
-    const postId = req.params.id;
-
-    await PostSchema.updateOne(
-      {
-        _id: postId,
-      },
-      {
-        isExpanded: req.body.isExpanded,
-      },
-    );
-
-    res.json({
-      success: true
-    })
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: 'Не удалось обновить статью',
-    })
-  }
-}
-
-export const updateIsChecked = async (req, res) => {
-  try {
-    for (let id of req.body.ids) {
-      await PostSchema.updateOne(
-        {
-          _id: id,
-        },
-        {
-          isChecked: req.body.isChecked,
-        },
-      );
+    if (subPosts) {
+      for (let id of subPosts) {
+        await PostSchema.findOneAndUpdate({_id: id}, newPost, {new: true});
+      }
+      return res.json({
+        success: true
+      })
     }
-
-    res.json({
-      success: true
-    })
-
   } catch (err) {
     console.log(err);
     res.status(500).json({
-      message: 'Не удалось обновить статью',
-    })
+      message: 'Не удалось обновить статьи',
+    });
   }
-}
-
-export const updateDate = async (req, res) => {
-  try {
-    const parentEl = req.params.id;
-
-    await PostSchema.updateOne(
-      {
-        _id: parentEl,
-      },
-      {
-        parentId: req.body.parentId,
-      },
-    );
-
-    for (let id of req.body.ids) {
-      await PostSchema.updateOne(
-        {
-          _id: id,
-        },
-        {
-          date: req.body.date,
-        },
-      );
-    }
-
-    res.json({
-      success: true
-    })
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: 'Не удалось обновить статью',
-    })
-  }
-}
-
-
-export const updateParentId = async (req, res) => {
-  try {
-    const postId = req.params.id;
-
-    await PostSchema.updateOne(
-      {
-        _id: postId,
-      },
-      {
-        parentId: req.body.parentId,
-      },
-    );
-
-    res.json({
-      success: true
-    })
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: 'Не удалось обновить статью',
-    })
-  }
-}
-
-export const updatePosition = async (req, res) => {
-  try {
-    const parentEl = req.params.id;
-
-    await PostSchema.updateOne(
-      {
-        _id: parentEl,
-      },
-      {
-        parentId: req.body.parentId,
-      },
-    );
-
-    for (let id of req.body.ids) {
-      await PostSchema.updateOne(
-        {
-          _id: id,
-        },
-        {
-          date: { current: req.body.currentTime },
-        },
-      );
-    }
-
-    res.json({
-      success: true
-    })
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: 'Не удалось обновить статью',
-    })
-  }
-}
+};

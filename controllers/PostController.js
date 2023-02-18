@@ -79,7 +79,11 @@ export const remove = async (req, res) => {
 export const handlePostUpdate = async (req, res) => {
   try {
     const id = req.params.id;
-    const newPost = req.body;
+    const newPost = req.body.values;
+
+    if (req.body.hasOwnProperty('changeParentId')) {
+      await PostSchema.findOneAndUpdate({_id: req.params.id}, {parentId: req.body.changeParentId}, {new: true});
+    }
 
     const allPosts = await PostSchema.find().populate('user').exec();
     const subPosts = getSubTasksId(allPosts, id) || [id];
